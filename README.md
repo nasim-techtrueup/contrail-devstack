@@ -44,6 +44,9 @@ Run the following NOT AS ROOT:
     2) Run utilities/contrail-status to see if all services are running
     3) screen -x stack and run through various tabs to see various devstack modules are running
 
+# Rebuild installation with new changes
+make required changes to contrail or devstack and trigger rebuild using
+    ./install.sh rebuild
 
 # Running Contrail sanity
 Note that default sample localrc enables simple gateway. A script is available that will

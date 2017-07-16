@@ -21,15 +21,6 @@ LC_ALL=C
 export LC_ALL
 DEVSTACK_FLAVOUR=${DEVSTACK_FLAVOUR:-newton}
 
-function wait_for_contrail_task() {
-    file_count=`ls .stage/contrail | wc -l`
-    while [ $file_count -ne 0 ]; do
-        echo "--------------Waiting for contrail task completion------------"
-        sleep 10
-        file_count=`ls .stage/contrail | wc -l`
-    done
-}
-
 function get_contrail_installer() {
     sudo rm -rf contrail-installer
     if [ $? -ne 0 ]; then
@@ -44,7 +35,6 @@ function get_contrail_installer() {
         exit 1
     fi
     cp localrc contrail-installer/localrc
-    echo "REMOVE_FILE_ON_COMPLETION=../.stage/contrail" >> contrail-installer/localrc
     echo 1 > .stage/get_contrail
 }
 
@@ -69,27 +59,21 @@ function get_devstack() {
 
 function restart_api_contrail() {
     (cd contrail-installer && ./contrail.sh restart_api)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     fi
 }
 
 function build_contrail() {
     (cd contrail-installer && ./contrail.sh build)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     fi
 }
 
 function install_contrail() {
     (cd contrail-installer && ./contrail.sh install)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     fi
 }
@@ -97,18 +81,14 @@ function install_contrail() {
 function restart_contrail() {
     echo "Restart function not supported"
     #(cd contrail-installer && ./contrail.sh restart)
-    #status=$?
-    #wait_for_contrail_task
-    #if [ $status -ne 0 ]; then
+    #if [ $? -ne 0 ]; then
     #    exit 1
     #fi
 }
 
 function start_contrail() {
     (cd contrail-installer && ./contrail.sh start)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     else
         echo "-----------------------------------------------------------"
@@ -127,9 +107,7 @@ function start_contrail() {
 
 function configure_contrail() {
     (cd contrail-installer && ./contrail.sh configure)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     fi
 }
@@ -144,9 +122,7 @@ function check_contrail() {
 
 function clean_contrail() {
     (cd contrail-installer && ./contrail.sh clean)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -ne 0 ]; then
+    if [ $? -ne 0 ]; then
         exit 1
     fi
 }
@@ -161,11 +137,8 @@ function stop_contrail() {
     else
         exit 1
     fi
-    echo 1 > .stage/contrail
     (cd contrail-installer && ./contrail.sh stop)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -eq 0 ];
+    if [ $? -eq 0 ];
     then
         echo "-----------------------------------------------------------"
         echo "---------------contrail stop completed---------------------"
@@ -176,11 +149,8 @@ function stop_contrail() {
 }
 
 function all_contrail_devstack() {
-    echo 1 > .stage/contrail
     (cd contrail-installer && ./contrail.sh)
-    status=$?
-    wait_for_contrail_task
-    if [ $status -eq 0 ];
+    if [ $? -eq 0 ];
     then
         echo "-----------------------------------------------------------"
         echo "---------------contrail start completed--------------------"
@@ -197,6 +167,12 @@ function all_contrail_devstack() {
     else
         exit 1
     fi
+}
+
+function rebuild_contrail() {
+    stop_contrail
+    sleep 10
+    all_contrail_devstack
 }
 
 #=================================
@@ -224,7 +200,7 @@ fi
 if [ $ARGS_COUNT -eq 0 ];
 then 
     all_contrail_devstack
-elif [ $ARGS_COUNT -eq 1 ] && [ "$OPTION" == "install" ] || [ "$OPTION" == "start" ] || [ "$OPTION" == "configure" ] || [ "$OPTION" == "clean" ] || [ "$OPTION" == "stop" ] || [ "$OPTION" == "build" ] || [ "$OPTION" == "restart" ] || [ "$OPTION" == "restart_api" ];
+elif [ $ARGS_COUNT -eq 1 ] && [ "$OPTION" == "install" ] || [ "$OPTION" == "start" ] || [ "$OPTION" == "configure" ] || [ "$OPTION" == "clean" ] || [ "$OPTION" == "stop" ] || [ "$OPTION" == "build" ] || [ "$OPTION" == "restart" ] || [ "$OPTION" == "restart_api" ] || [ "$OPTION" == "rebuild" ];
 then
     ${OPTION}_contrail
 else
@@ -239,6 +215,7 @@ else
     echo_msg "configure"
     echo_msg "clean"
     echo_msg "restart"
+    echo_msg "rebuild"
     echo_msg "restart_api"
 
 fi
