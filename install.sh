@@ -21,6 +21,12 @@ LC_ALL=C
 export LC_ALL
 DEVSTACK_FLAVOUR=${DEVSTACK_FLAVOUR:-newton}
 
+DATABASE_PASSWORD=${DATABASE_PASSWORD:-contrail123}
+RABBIT_PASSWORD=${RABBIT_PASSWORD:-contrail123}
+SERVICE_TOKEN=${SERVICE_TOKEN:- contrail123}
+SERVICE_PASSWORD=${SERVICE_PASSWORD:-contrail123}
+ADMIN_PASSWORD=${ADMIN_PASSWORD:-contrail123}
+
 function get_contrail_installer() {
     sudo rm -rf contrail-installer
     if [ $? -ne 0 ]; then
@@ -52,8 +58,19 @@ function get_devstack() {
         exit 1
     fi
     cp contrail-installer/devstack/lib/neutron_plugins/opencontrail devstack/lib/neutron_plugins/
-    cp contrail-installer/devstack/samples/localrc-all devstack/localrc
-    echo "PHYSICAL_INTERFACE="${PHYSICAL_INTERFACE} >> devstack/localrc
+    # check if local devstack file exists
+    HAVE_FILE=`ls -l | grep localrc_devstack | wc -l`
+    if [ $HAVE_FILE -ne 0 ]; then
+        cp localrc_devstack devstack/localrc
+    else
+        cp contrail-installer/devstack/samples/localrc-all devstack/localrc
+        echo "PHYSICAL_INTERFACE="${PHYSICAL_INTERFACE} >> devstack/localrc
+        echo "DATABASE_PASSWORD="${DATABASE_PASSWORD} >> devstack/localrc
+        echo "RABBIT_PASSWORD="${RABBIT_PASSWORD} >> devstack/localrc
+        echo "SERVICE_TOKEN="${SERVICE_TOKEN} >> devstack/localrc
+        echo "SERVICE_PASSWORD="${SERVICE_PASSWORD} >> devstack/localrc
+        echo "ADMIN_PASSWORD="${ADMIN_PASSWORD} >> devstack/localrc
+    fi
     echo 1 > .stage/get_devstack
 }
 
