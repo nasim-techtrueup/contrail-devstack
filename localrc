@@ -48,7 +48,7 @@ CASS_MAX_HEAP_SIZE=500M
 CASS_HEAP_NEWSIZE=100M
 
 # number of jobs used to build
-# NB_JOBS=4
+NB_JOBS=1
 
 # target of the build debug/production
 # TARGET=production

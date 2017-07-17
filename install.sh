@@ -27,6 +27,12 @@ SERVICE_TOKEN=${SERVICE_TOKEN:- contrail123}
 SERVICE_PASSWORD=${SERVICE_PASSWORD:-contrail123}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-contrail123}
 
+# number of multiple jobs for contrail build
+MULTI_JOB_COUNT=${MULTI_JOB_COUNT:-4}
+# contrail multiple job doesnot run consistently, so retry more than once
+MULTI_RETRY_COUNT=${MULTI_RETRY_COUNT:-2}
+
+RET_VAL=0
 function get_contrail_installer() {
     sudo rm -rf contrail-installer
     if [ $? -ne 0 ]; then
@@ -81,9 +87,27 @@ function restart_api_contrail() {
     fi
 }
 
-function build_contrail() {
+function build_contrail_internal() {
     (cd contrail-installer && ./contrail.sh build)
-    if [ $? -ne 0 ]; then
+    RET_VAL=$?
+}
+
+function build_contrail() {
+    sed -i "s/NB_JOBS=./NB_JOBS=$MULTI_JOB_COUNT/" contrail-installer/localrc
+    build_contrail_internal
+    retry=$MULTI_RETRY_COUNT
+    while [ $RET_VAL -ne 0 ] && [ $retry -ne 0 ];  do
+        retry=`expr $retry-1`
+        if [ $retry -eq 0 ]; then
+            # on last retry switch to 1 job
+            sed -i "s/NB_JOBS=./NB_JOBS=1/" contrail-installer/localrc
+            echo "Failed retrying again with NB_JOBS=1"
+        else
+            echo "Failed retrying again"
+        fi
+        build_contrail_internal
+    done
+    if [ $RET_VAL -ne 0 ]; then
         exit 1
     fi
 }
@@ -165,9 +189,27 @@ function stop_contrail() {
     fi
 }
 
-function all_contrail_devstack() {
+function all_contrail_internal() {
     (cd contrail-installer && ./contrail.sh)
-    if [ $? -eq 0 ];
+    RET_VAL=$?
+}
+
+function all_contrail_devstack() {
+    sed -i "s/NB_JOBS=./NB_JOBS=$MULTI_JOB_COUNT/" contrail-installer/localrc
+    all_contrail_internal
+    retry=$MULTI_RETRY_COUNT
+    while [ $RET_VAL -ne 0 ] && [ $retry -ne 0 ];  do
+        let retry=$retry-1
+        if [ $retry -eq 0 ]; then
+            # on last retry switch to 1 job
+            sed -i "s/NB_JOBS=./NB_JOBS=1/" contrail-installer/localrc
+            echo "Failed retrying again with NB_JOBS=1"
+        else
+            echo "Failed retrying again"
+        fi
+        all_contrail_internal
+    done
+    if [ $RET_VAL -eq 0 ];
     then
         echo "-----------------------------------------------------------"
         echo "---------------contrail start completed--------------------"
